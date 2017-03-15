@@ -1,0 +1,4 @@
+"0","countsNoOrg <- counts[!row.names(counts)%in%org,]"
+"0","map <- map[match(colnames(countsNoOrg), map$SampleID),]"
+"0","map$OriginalDepth <- colSums(counts)"
+"0","map$FilteredDepth <- colSums(countsNoOrg)"

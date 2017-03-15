@@ -1,0 +1,2 @@
+"0","lc.exp <- list(map = map.goodSamples, tmm = counts.tmm, ra = counts.RA)"
+"0","save(lc.exp, file = ""lifeCylceExperiment.rda"")"

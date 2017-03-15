@@ -1,0 +1,82 @@
+---
+title: "Data Clean"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(forcats)
+library(edgeR)
+```
+
+```{r}
+setwd("/Users/edwards/Google Drive/RMB/Analyses/LifeCycle/Data/")
+map <- read.table("life_cycle_map.txt", header = T, sep = "\t")
+counts <- read.table(gzfile("lifeCycleOtuTable.txt.gz"), header = T, row.names = 1)
+org <- readRDS("~/RMB/Reference/organelle.rds")
+```
+
+```{r}
+counts.NoOrg <- counts[!row.names(counts)%in%org,]
+map <- map[match(colnames(counts.NoOrg), map$SampleID),]
+map$OriginalDepth <- colSums(counts)
+map$FilteredDepth <- colSums(counts.NoOrg)
+```
+
+```{r}
+map %>% 
+  gather(Type, Depth, OriginalDepth:FilteredDepth) %>% 
+  ggplot(aes(Depth, fill = Type)) +
+  geom_histogram() +
+  scale_x_log10() +
+  facet_grid(Site~Compartment)
+```
+
+```{r}
+map %>% 
+  mutate(discard = ifelse(FilteredDepth > 2000, "yes", "no")) %>% 
+  group_by(discard) %>% 
+  summarise(n())
+```
+
+```{r}
+counts.NoOrg.goodSamples <- counts.NoOrg[,colSums(counts.NoOrg) >= 2000]
+```
+
+```{r}
+non_zero <- function(x) sum(x > 0)
+counts.NoOrg.goodSamples.goodOTUs <- counts.NoOrg.goodSamples[apply(counts.NoOrg.goodSamples, 1, non_zero) > 0.05*ncol(counts.NoOrg.goodSamples),]
+map.goodSamples <- map[match(colnames(counts.NoOrg.goodSamples.goodOTUs), map$SampleID),]
+dim(counts.NoOrg.goodSamples)
+dim(counts.NoOrg.goodSamples.goodOTUs)
+```
+
+How many sequences did we lose by removing low prevalence OTUs?
+```{r}
+map.goodSamples$FinalDepth <- colSums(counts.NoOrg.goodSamples.goodOTUs)
+map.goodSamples %>% 
+  ggplot(aes(FilteredDepth - FinalDepth, FinalDepth, color = Compartment)) +
+  geom_point() +
+  scale_y_log10() +
+  scale_x_log10()
+```
+
+## TMM Normalization
+```{r}
+otuL <- DGEList(counts.NoOrg.goodSamples.goodOTUs, lib.size = colSums(counts.NoOrg.goodSamples.goodOTUs))
+otuL <- calcNormFactors(otuL)
+counts.tmm <- cpm(otuL)
+```
+
+## Relative Abundance Normalization
+```{r}
+counts.RA <- t(t(counts.NoOrg.goodSamples.goodOTUs) / colSums(counts.NoOrg.goodSamples.goodOTUs)) * 1000
+```
+
+## Make an object to keep everything in and save it
+```{r}
+lc.exp <- list(map = map.goodSamples, tmm = counts.tmm, ra = counts.RA)
+save(lc.exp, file = "lifeCylceExperiment.rda")
+```
+
