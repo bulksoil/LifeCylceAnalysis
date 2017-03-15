@@ -80,3 +80,11 @@ lc.exp <- list(map = map.goodSamples, tmm = counts.tmm, ra = counts.RA)
 save(lc.exp, file = "lifeCylceExperiment.rda")
 ```
 
+## Also save the count tables as .tsv files
+I will later gzip the files in terminal
+```{r}
+write.table(counts.tmm, file = "lifeCycle_OTU_table_TMM.tsv", sep = "\t", quote = F)
+write.table(counts.RA, file = "lifeCycle_OTU_table_RA.tsv", sep ="\t", quote = F)
+write.table(map.goodSamples, file = "lifeCycle_goodSamples_map.txt", sep = "\t", quote = F)
+```
+
